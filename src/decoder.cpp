@@ -2,9 +2,9 @@
 
 int main(int args, const char** argv) {
 
-	bool use_hard_coded_path = false;
+	bool use_hard_coded_path = true;
 	if (use_hard_coded_path) {
-		std::string filename = "C:\\Users\\kala\\code\\computer_enhance_solutions\\computer_enhance\\perfaware\\part1\\listing_0041_add_sub_cmp_jnz";
+		std::string filename = "C:\\Users\\kala\\code\\computer_enhance_solutions\\solutions\\8086_disasm\\tests\\listing_0052";
 		std::string file_contents = read_entire_file(filename);
 		std::string result = parse(file_contents);
 
@@ -31,7 +31,7 @@ std::string read_entire_file(const std::string& filename) {
 
 
 std::string parse(const std::string& contents) {
-	bool verbose_print = false;
+	bool verbose_print = true;
 
 	std::string result = "";
 	result.append("bits 16\n");
@@ -49,13 +49,10 @@ std::string parse(const std::string& contents) {
 		// get unfilled instruction info struct, containing the opcode and the length of the instruction. 
 		InstructionInfo current_info = parse_instruction_type(current_byte);
 		if (verbose_print) {
-			std::cout << "current_byte: " << get_binary_string_of_byte(current_byte) << " ";
+			std::cout << "current_byte: " << get_binary_string_of_byte(current_byte) << "\n";
 		
 		}
-		if (current_info.type == InstructionType::RET_JNS) {
-			int x = 10;
-		}
-		int y = 200;
+		
 		assert(current_info.type != InstructionType::UNIDENTIFIED);
 
 		bool is_next_byte_needed_for_length = is_next_byte_needed_to_determine_length(current_info);
@@ -119,83 +116,133 @@ InstructionInfo parse_instruction_type(char data) {
 	InstructionInfo info;
 	info.type = InstructionType::UNIDENTIFIED;
 
-	
-	int value = data; // put data into an int, so we can use a switch statement here (binary literals are of type int!)
-	// but we dont want to sign extend here, so we additionally have to mask here
+	int value = data;
 	value = value & 0xff;
 
-	// check full 8-bits
-	switch (value) {
-		case 0b10001110:
-			info.type = InstructionType::MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER;
-			break;
-		case 0b10001100:
-			info.type = InstructionType::MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY;
-			break;
-		case 0b01110100:
-			info.type = InstructionType::RET_JE_OR_JZE;
-			break;
-		case 0b01111100:
-			info.type = InstructionType::RET_JL_OR_JNGE;
-			break;
-		case 0b01111110:
-			info.type = InstructionType::RET_JLE_OR_JNG;
-			break;
-		case 0b01110010:
-			info.type = InstructionType::RET_JB_OR_JNA;
-			break;
-		case 0b01110110:
-			info.type = InstructionType::RET_JBE_OR_JNA;
-			break;
-		case 0b01111010:
-			info.type = InstructionType::RET_JP_OR_JPE;
-			break;
-		case 0b01110000:
-			info.type = InstructionType::RET_JO;
-			break;
-		case 0b01111000:
-			info.type = InstructionType::RET_JS;
-			break;
-		case 0b01110101:
-			info.type = InstructionType::RET_JNE_OR_JNZ;
-			break;
-		case 0b01111101:
-			info.type = InstructionType::RET_JNL_OR_JGE;
-			break;
-		case 0b01111111:
-			info.type = InstructionType::RET_JNLE_OR_JG;
-			break;
-		case 0b01110011:
-			info.type = InstructionType::RET_JNB_OR_JAE;
-			break;
-		case 0b01110111:
-			info.type = InstructionType::RET_JNBE_OR_JA;
-			break;
-		case 0b01111011:
-			info.type = InstructionType::RET_JNP_OR_JPO;
-			break;
-		case 0b01110001:
-			info.type = InstructionType::RET_JNO;
-			break;
-		case 0b01111001:
-			info.type = InstructionType::RET_JNS;
-			break;
-		case 0b11100010:
-			info.type = InstructionType::RET_LOOP;
-			break;
-		case 0b11100001:
-			info.type = InstructionType::RET_LOOPZ_OR_LOOPE;
-			break;
-		case 0b11100000:
-			info.type = InstructionType::RET_LOOPNZ_OR_LOOPNE;
-			break;
-		case 0b11100011:
-			info.type = InstructionType::RET_JCXZ;
-			break;
-		default:
-			break;
+	// we first see if its some stupid push/pop instruction, which are special cases.
+	int hi_3_bits = value & 0b11100000;
+	int lo_3_bits = value & 0b00000111;
+
+	if (hi_3_bits == 0b00000000) {
+		switch (lo_3_bits) {
+			case 0b00000110:
+				info.type = InstructionType::PUSH_SEGMENT_REGISTER;
+				break;
+			case 0b00000111:
+				info.type = InstructionType::POP_SEGMENT_REGISTER;
+				break;
+			default:
+				break;
+		}
 	}
 
+	if (info.type == InstructionType::UNIDENTIFIED) {
+		value = data; // put data into an int, so we can use a switch statement here (binary literals are of type int!)
+		// but we dont want to sign extend here, so we additionally have to mask here
+		value = value & 0xff;
+
+		// check full 8-bits
+		switch (value) {
+			case 0b10001110:
+				info.type = InstructionType::MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER;
+				break;
+			case 0b10001100:
+				info.type = InstructionType::MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY;
+				break;
+			case 0b01110100:
+				info.type = InstructionType::RET_JE_OR_JZE;
+				break;
+			case 0b01111100:
+				info.type = InstructionType::RET_JL_OR_JNGE;
+				break;
+			case 0b01111110:
+				info.type = InstructionType::RET_JLE_OR_JNG;
+				break;
+			case 0b01110010:
+				info.type = InstructionType::RET_JB_OR_JNA;
+				break;
+			case 0b01110110:
+				info.type = InstructionType::RET_JBE_OR_JNA;
+				break;
+			case 0b01111010:
+				info.type = InstructionType::RET_JP_OR_JPE;
+				break;
+			case 0b01110000:
+				info.type = InstructionType::RET_JO;
+				break;
+			case 0b01111000:
+				info.type = InstructionType::RET_JS;
+				break;
+			case 0b01110101:
+				info.type = InstructionType::RET_JNE_OR_JNZ;
+				break;
+			case 0b01111101:
+				info.type = InstructionType::RET_JNL_OR_JGE;
+				break;
+			case 0b01111111:
+				info.type = InstructionType::RET_JNLE_OR_JG;
+				break;
+			case 0b01110011:
+				info.type = InstructionType::RET_JNB_OR_JAE;
+				break;
+			case 0b01110111:
+				info.type = InstructionType::RET_JNBE_OR_JA;
+				break;
+			case 0b01111011:
+				info.type = InstructionType::RET_JNP_OR_JPO;
+				break;
+			case 0b01110001:
+				info.type = InstructionType::RET_JNO;
+				break;
+			case 0b01111001:
+				info.type = InstructionType::RET_JNS;
+				break;
+			case 0b11100010:
+				info.type = InstructionType::RET_LOOP;
+				break;
+			case 0b11100001:
+				info.type = InstructionType::RET_LOOPZ_OR_LOOPE;
+				break;
+			case 0b11100000:
+				info.type = InstructionType::RET_LOOPNZ_OR_LOOPNE;
+				break;
+			case 0b11100011:
+				info.type = InstructionType::RET_JCXZ;
+				break;
+			case 0b11111111:
+				info.type = InstructionType::PUSH_REGISTER_OR_MEMORY;
+				break;
+			case 0b10001111:
+				info.type = InstructionType::POP_REGISTER_OR_MEMORY;
+				break;
+			case 0b11010111:
+				info.type = InstructionType::XLAT;
+				break;
+			case 0b10001101:
+				info.type = InstructionType::LEA;
+				break;
+			case 0b11000101:
+				info.type = InstructionType::LDS;
+				break;
+			case 0b11000100:
+				info.type = InstructionType::LES;
+				break;
+			case 0b10011111:
+				info.type = InstructionType::LAHF;
+				break;
+			case 0b10011110:
+				info.type = InstructionType::SAHF;
+				break;
+			case 0b10011100:
+				info.type = InstructionType::PUSHF;
+				break;
+			case 0b10011101:
+				info.type = InstructionType::POPF;
+				break;
+			default:
+				break;
+		}
+	}
 	if (info.type == InstructionType::UNIDENTIFIED) {
 		// check 7-bits
 		int value_7_bits_masked = value & 0b11111110;
@@ -223,6 +270,21 @@ InstructionInfo parse_instruction_type(char data) {
 				break;
 			case 0b00111100: 
 				info.type = InstructionType::CMP_IMMEDIATE_WITH_ACCUMULATOR;
+				break;
+			case 0b10000110: 
+				info.type = InstructionType::XCHG_REGISTER_OR_MEMORY_WITH_REGISTER;
+				break;
+			case 0b11100100: 
+				info.type = InstructionType::IN_FIXED_PORT;
+				break;
+			case 0b11101100: 
+				info.type = InstructionType::IN_VARIABLE_PORT;
+				break;
+			case 0b11100110: 
+				info.type = InstructionType::OUT_FIXED_PORT;
+				break;
+			case 0b11101110: 
+				info.type = InstructionType::OUT_VARIABLE_PORT;
 				break;
 			default:
 				break;
@@ -268,6 +330,15 @@ InstructionInfo parse_instruction_type(char data) {
 		// check 5-bits
 		int value_5_bits_masked = value & 0b11111000;
 		switch (value_5_bits_masked) {
+			case 0b01010000:
+				info.type = InstructionType::PUSH_REGISTER;
+				break;
+			case 0b01011000:
+				info.type = InstructionType::POP_REGISTER;
+				break;
+			case 0b10010000:
+				info.type = InstructionType::XCHG_REGISTER_WITH_ACCUMULATOR;
+				break;
 			default:
 				break;
 		}
@@ -305,7 +376,13 @@ bool is_next_byte_needed_to_determine_length(InstructionInfo& info) {
 		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
-		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: 
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case PUSH_REGISTER_OR_MEMORY: // fallthrough
+		case POP_REGISTER_OR_MEMORY: // fallthrough
+		case XCHG_REGISTER_OR_MEMORY_WITH_REGISTER: // fallthrough
+		case LEA: // fallthrough
+		case LDS: // fallthrough
+		case LES:
 			is_needed = true;
 			break;
 		case InstructionTypeEnumLength: // fallthrough to default	
@@ -336,6 +413,20 @@ bool is_next_byte_needed_to_determine_length(InstructionInfo& info) {
 		case RET_LOOPZ_OR_LOOPE: // fallthrough to default	
 		case RET_LOOPNZ_OR_LOOPNE: // fallthrough to default	
 		case RET_JCXZ: // fallthrough to default
+		case PUSH_REGISTER: // fallthrough to default
+		case PUSH_SEGMENT_REGISTER: // fallthrough to default
+		case POP_REGISTER: // fallthrough to default
+		case POP_SEGMENT_REGISTER: // fallthrough to default
+		case XCHG_REGISTER_WITH_ACCUMULATOR: // fallthrough to default
+		case IN_FIXED_PORT: // fallthrough to default
+		case IN_VARIABLE_PORT: // fallthrough to default
+		case OUT_FIXED_PORT: // fallthrough to default
+		case OUT_VARIABLE_PORT: // fallthrough to default
+		case XLAT: // fallthrough to default
+		case LAHF: // fallthrough to default
+		case SAHF: // fallthrough to default
+		case PUSHF: // fallthrough to default
+		case POPF: // fallthrough to default
 		case UNIDENTIFIED: // fallthrough to default
 		default:
 			is_needed = false;
@@ -435,7 +526,13 @@ void determine_instruction_length(InstructionInfo& info, char first_byte, char s
 		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
-		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case PUSH_REGISTER_OR_MEMORY: // fallthrough
+		case POP_REGISTER_OR_MEMORY: // fallthrough
+		case XCHG_REGISTER_OR_MEMORY_WITH_REGISTER: // fallthrough
+		case LEA: // fallthrough
+		case LDS: // fallthrough
+		case LES: 
 			info.base_length = 2; 
 			info.displacement_length = determine_displacement_length_from_second_byte(second_byte);
 			break;
@@ -462,16 +559,35 @@ void determine_instruction_length(InstructionInfo& info, char first_byte, char s
 			info.base_length = 1;
 			info.ip_inc8_length = 1;
 			break;
+		case PUSH_REGISTER: // fallthrough
+		case PUSH_SEGMENT_REGISTER: // fallthrough
+		case POP_REGISTER: // fallthrough
+		case POP_SEGMENT_REGISTER: // fallthrough
+		case XCHG_REGISTER_WITH_ACCUMULATOR: // fallthrough
+		case IN_VARIABLE_PORT: // fallthrough
+		case OUT_VARIABLE_PORT: // fallthrough
+		case XLAT: // fallthrough
+		case LAHF: // fallthrough
+		case SAHF: // fallthrough
+		case PUSHF: // fallthrough
+		case POPF:
+			info.base_length = 1;
+			break;
+		case IN_FIXED_PORT: // fallthrough
+		case OUT_FIXED_PORT:
+			info.base_length = 1;
+			info.data8_length = 1;
+			break;
 		case InstructionTypeEnumLength: // fallthrough to default
 		case UNIDENTIFIED: // fallthrough to default
 		default:
 			break;
 	}
-	info.instruction_length = info.base_length + info.displacement_length + info.data_length + info.address_length + info.ip_inc8_length;
+	info.instruction_length = info.base_length + info.displacement_length + info.data_length + info.address_length + info.ip_inc8_length + info.data8_length;
 }
 
 void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INSTRUCTION_LENGTH > & instruction_data) {
-	assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length + info.ip_inc8_length);
+	assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length + info.ip_inc8_length + info.data8_length);
 	switch (info.type) {
 		case InstructionType::MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER:
 			assert(info.base_length == 2);
@@ -655,6 +771,89 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 		case RET_JCXZ: 
 			info.instruction_ip_inc8 = instruction_data[1];
 			break;
+		case PUSH_REGISTER_OR_MEMORY: // fallthrough
+		case POP_REGISTER_OR_MEMORY:
+			assert(info.base_length == 2);
+			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
+			assert(info.address_length == 0 && info.data_length == 0);
+
+			info.instruction_mod = (instruction_data[1] & 0b11000000) >> 6;
+			info.instruction_rm = instruction_data[1] & 0b00000111;
+
+			if (info.displacement_length > 0) {
+				if (info.displacement_length == 1) {
+					info.instruction_disp_lo = instruction_data[2];
+				} else if (info.displacement_length == 2) {
+					info.instruction_disp_lo = instruction_data[2];
+					info.instruction_disp_hi = instruction_data[3];
+				}
+			}
+			break;
+		case XCHG_REGISTER_OR_MEMORY_WITH_REGISTER: 
+			assert(info.base_length == 2);
+			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
+			assert(info.address_length == 0 && info.data_length == 0);
+
+
+			info.instruction_w = instruction_data[0] & 0b00000001;
+			info.instruction_mod = (instruction_data[1] & 0b11000000) >> 6;
+			info.instruction_reg = (instruction_data[1] & 0b00111000) >> 3;
+			info.instruction_rm = instruction_data[1] & 0b00000111;
+			
+			if (info.displacement_length > 0) {
+				if (info.displacement_length == 1) {
+					info.instruction_disp_lo = instruction_data[2];
+				} else if (info.displacement_length == 2) {
+					info.instruction_disp_lo = instruction_data[2];
+					info.instruction_disp_hi = instruction_data[3];
+				}
+			}
+			break;
+		case LEA: // fallthrough
+		case LDS: // fallthrough
+		case LES:
+			assert(info.base_length == 2);
+			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
+			assert(info.address_length == 0 && info.data_length == 0);
+
+			info.instruction_mod = (instruction_data[1] & 0b11000000) >> 6;
+			info.instruction_reg = (instruction_data[1] & 0b00111000) >> 3;
+			info.instruction_rm = instruction_data[1] & 0b00000111;
+
+			if (info.displacement_length > 0) {
+				if (info.displacement_length == 1) {
+					info.instruction_disp_lo = instruction_data[2];
+				} else if (info.displacement_length == 2) {
+					info.instruction_disp_lo = instruction_data[2];
+					info.instruction_disp_hi = instruction_data[3];
+				}
+			}
+			break;
+		case PUSH_REGISTER: // fallthrough
+		case POP_REGISTER: // fallthrough
+		case XCHG_REGISTER_WITH_ACCUMULATOR:
+			info.instruction_reg = instruction_data[0] & 0b00000111;
+			break;
+		case PUSH_SEGMENT_REGISTER: // fallthrough
+		case POP_SEGMENT_REGISTER: 
+			info.instruction_reg = (instruction_data[0] & 0b00011100) >> 2;
+			break;
+		case IN_FIXED_PORT: // fallthrough
+		case OUT_FIXED_PORT:
+			info.instruction_w = instruction_data[0] & 0b00000001;
+			info.instruction_data8 = instruction_data[1];
+			break;
+		case IN_VARIABLE_PORT: // fallthrough
+		case OUT_VARIABLE_PORT:
+			info.instruction_w = instruction_data[0] & 0b00000001;
+			break;
+		case XLAT: // fallthrough
+		case LAHF: // fallthrough
+		case SAHF: // fallthrough
+		case PUSHF: // fallthrough
+		case POPF:
+			// dont need to fill out anything, these are 1-byte instructions, uniquely specified by their opcode/info.type.
+			break;
 		case InstructionTypeEnumLength: // fallthrough to default
 		case UNIDENTIFIED: // fallthrough to default
 		default:
@@ -744,9 +943,64 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 
 			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
 			break;
-		case MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER:
+		case MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER: 
+			// TODO
 			break;
 		case MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY:
+			// TODO
+			break;
+		case PUSH_REGISTER_OR_MEMORY: // fallthrough
+		case POP_REGISTER_OR_MEMORY:
+			if (info.data_length == 1) {
+				displacement_size_string = "BYTE";
+			} else if (info.data_length == 2) {
+				displacement_size_string = "WORD";
+			}
+			dst_operand = instruction_decode_effective_address(info, info.instruction_rm);
+			disassembly = mnemonic + " " + displacement_size_string  + " " + dst_operand;
+			break;
+		case XCHG_REGISTER_OR_MEMORY_WITH_REGISTER:
+			if (info.instruction_w == 0) {
+				displacement_size_string = "BYTE";
+			} else if (info.instruction_w == 1) {
+				displacement_size_string = "WORD";
+			}
+
+			dst_operand = instruction_decode_effective_address(info, info.instruction_rm);
+			src_operand = decode_register_name(info.instruction_reg, info.instruction_w);
+
+			disassembly = mnemonic + " " + dst_operand + ", " +  displacement_size_string + "  " + src_operand;
+			break;
+		case PUSH_SEGMENT_REGISTER: // fallthrough
+		case POP_SEGMENT_REGISTER:
+			// TODO
+			break;
+		case XCHG_REGISTER_WITH_ACCUMULATOR:
+			src_operand = decode_register_name(info.instruction_reg, info.instruction_w);
+			dst_operand = "AX";
+			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
+			break;
+		case IN_FIXED_PORT: // fallthrough
+		case OUT_FIXED_PORT:
+			dst_operand = std::to_string(info.instruction_data8);
+			disassembly = mnemonic + " " + dst_operand;
+			break;
+		case IN_VARIABLE_PORT: // fallthrough
+		case OUT_VARIABLE_PORT: // fallthrough
+		case XLAT: // fallthrough
+		case LAHF: // fallthrough
+		case SAHF: // fallthrough
+		case PUSHF: // fallthrough
+		case POPF:
+			disassembly = mnemonic;
+			break;
+		case LEA: // fallthrough
+		case LDS: // fallthrough
+		case LES:
+			src_operand = instruction_decode_effective_address(info, info.instruction_rm);
+			dst_operand = decode_register_name(info.instruction_reg, info.instruction_w);
+
+			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
 			break;
 		case ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY:
 			if (info.instruction_w == 0) {
@@ -823,6 +1077,7 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			}
 			disassembly = mnemonic + " " + dst_operand;
 			break;
+
 		default:
 			disassembly = "";
 			break;
@@ -927,6 +1182,52 @@ std::string determine_mnemonic_from_info(const InstructionInfo& info) {
 			break;
 		case RET_JCXZ: 
 			mnemonic = "JCXZ";
+			break;
+		case PUSH_REGISTER_OR_MEMORY: // fallthrough 
+		case PUSH_REGISTER: // fallthrough 
+		case PUSH_SEGMENT_REGISTER:
+			mnemonic = "PUSH";
+			break;
+		case POP_REGISTER_OR_MEMORY: // fallthrough 
+		case POP_REGISTER: // fallthrough 
+		case POP_SEGMENT_REGISTER:
+			mnemonic = "POP";
+			break;
+		case XCHG_REGISTER_OR_MEMORY_WITH_REGISTER: // fallthrough 
+		case XCHG_REGISTER_WITH_ACCUMULATOR:
+			mnemonic = "XCHG";
+			break;
+		case IN_FIXED_PORT: // fallthrough 
+		case IN_VARIABLE_PORT:
+			mnemonic = "IN";
+			break;
+		case OUT_FIXED_PORT: // fallthrough 
+		case OUT_VARIABLE_PORT:
+			mnemonic = "OUT";
+			break;
+		case XLAT:
+			mnemonic = "XLAT";
+			break;
+		case LEA:
+			mnemonic = "LEA";
+			break;
+		case LDS:
+			mnemonic = "LDS";
+			break;
+		case LES:
+			mnemonic = "LES";
+			break;
+		case LAHF:
+			mnemonic = "LAHF";
+			break;
+		case SAHF: 
+			mnemonic = "SAHF";
+			break;
+		case PUSHF:
+			mnemonic = "PUSHF";
+			break;
+		case POPF:
+			mnemonic = "POPF";
 			break;
 		case InstructionTypeEnumLength: // fallthrough to default
 		default:
