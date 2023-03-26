@@ -48,6 +48,14 @@ std::string parse(const std::string& contents) {
 
 		// get unfilled instruction info struct, containing the opcode and the length of the instruction. 
 		InstructionInfo current_info = parse_instruction_type(current_byte);
+		if (verbose_print) {
+			std::cout << "current_byte: " << get_binary_string_of_byte(current_byte) << " ";
+		
+		}
+		if (current_info.type == InstructionType::RET_JNS) {
+			int x = 10;
+		}
+		int y = 200;
 		assert(current_info.type != InstructionType::UNIDENTIFIED);
 
 		bool is_next_byte_needed_for_length = is_next_byte_needed_to_determine_length(current_info);
@@ -111,7 +119,11 @@ InstructionInfo parse_instruction_type(char data) {
 	InstructionInfo info;
 	info.type = InstructionType::UNIDENTIFIED;
 
-	int value = data;
+	
+	int value = data; // put data into an int, so we can use a switch statement here (binary literals are of type int!)
+	// but we dont want to sign extend here, so we additionally have to mask here
+	value = value & 0xff;
+
 	// check full 8-bits
 	switch (value) {
 		case 0b10001110:
@@ -119,6 +131,66 @@ InstructionInfo parse_instruction_type(char data) {
 			break;
 		case 0b10001100:
 			info.type = InstructionType::MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY;
+			break;
+		case 0b01110100:
+			info.type = InstructionType::RET_JE_OR_JZE;
+			break;
+		case 0b01111100:
+			info.type = InstructionType::RET_JL_OR_JNGE;
+			break;
+		case 0b01111110:
+			info.type = InstructionType::RET_JLE_OR_JNG;
+			break;
+		case 0b01110010:
+			info.type = InstructionType::RET_JB_OR_JNA;
+			break;
+		case 0b01110110:
+			info.type = InstructionType::RET_JBE_OR_JNA;
+			break;
+		case 0b01111010:
+			info.type = InstructionType::RET_JP_OR_JPE;
+			break;
+		case 0b01110000:
+			info.type = InstructionType::RET_JO;
+			break;
+		case 0b01111000:
+			info.type = InstructionType::RET_JS;
+			break;
+		case 0b01110101:
+			info.type = InstructionType::RET_JNE_OR_JNZ;
+			break;
+		case 0b01111101:
+			info.type = InstructionType::RET_JNL_OR_JGE;
+			break;
+		case 0b01111111:
+			info.type = InstructionType::RET_JNLE_OR_JG;
+			break;
+		case 0b01110011:
+			info.type = InstructionType::RET_JNB_OR_JAE;
+			break;
+		case 0b01110111:
+			info.type = InstructionType::RET_JNBE_OR_JA;
+			break;
+		case 0b01111011:
+			info.type = InstructionType::RET_JNP_OR_JPO;
+			break;
+		case 0b01110001:
+			info.type = InstructionType::RET_JNO;
+			break;
+		case 0b01111001:
+			info.type = InstructionType::RET_JNS;
+			break;
+		case 0b11100010:
+			info.type = InstructionType::RET_LOOP;
+			break;
+		case 0b11100001:
+			info.type = InstructionType::RET_LOOPZ_OR_LOOPE;
+			break;
+		case 0b11100000:
+			info.type = InstructionType::RET_LOOPNZ_OR_LOOPNE;
+			break;
+		case 0b11100011:
+			info.type = InstructionType::RET_JCXZ;
 			break;
 		default:
 			break;
@@ -144,13 +216,13 @@ InstructionInfo parse_instruction_type(char data) {
 				info.type = InstructionType::ADC_IMMEDIATE_TO_ACCUMULATOR;
 				break;
 			case 0b00101100:
-				info.type = InstructionType::SUB_IMMEDIATE_TO_ACCUMULATOR;
+				info.type = InstructionType::SUB_IMMEDIATE_FROM_ACCUMULATOR;
 				break;
 			case 0b00011100: 
-				info.type = InstructionType::SBB_IMMEDIATE_TO_ACCUMULATOR;
+				info.type = InstructionType::SBB_IMMEDIATE_FROM_ACCUMULATOR;
 				break;
 			case 0b00111100: 
-				info.type = InstructionType::CMP_IMMEDIATE_TO_ACCUMULATOR;
+				info.type = InstructionType::CMP_IMMEDIATE_WITH_ACCUMULATOR;
 				break;
 			default:
 				break;
@@ -233,7 +305,7 @@ bool is_next_byte_needed_to_determine_length(InstructionInfo& info) {
 		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
-		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: 
 			is_needed = true;
 			break;
 		case InstructionTypeEnumLength: // fallthrough to default	
@@ -241,9 +313,29 @@ bool is_next_byte_needed_to_determine_length(InstructionInfo& info) {
 		case MOV_ACCUMULATOR_TO_MEMORY: // fallthrough to default	
 		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
 		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
-		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
-		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
-		case CMP_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
+		case SUB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough to default	
+		case SBB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough to default	
+		case CMP_IMMEDIATE_WITH_ACCUMULATOR: // fallthrough to default	
+		case RET_JE_OR_JZE: // fallthrough to default	
+		case RET_JL_OR_JNGE: // fallthrough to default	
+		case RET_JLE_OR_JNG: // fallthrough to default	
+		case RET_JB_OR_JNA: // fallthrough to default	
+		case RET_JBE_OR_JNA: // fallthrough to default	
+		case RET_JP_OR_JPE: // fallthrough to default	
+		case RET_JO: // fallthrough to default	
+		case RET_JS: // fallthrough to default	
+		case RET_JNE_OR_JNZ: // fallthrough to default	
+		case RET_JNL_OR_JGE: // fallthrough to default	
+		case RET_JNLE_OR_JG: // fallthrough to default	
+		case RET_JNB_OR_JAE: // fallthrough to default	
+		case RET_JNBE_OR_JA: // fallthrough to default	
+		case RET_JNP_OR_JPO: // fallthrough to default	
+		case RET_JNO: // fallthrough to default	
+		case RET_JNS: // fallthrough to default	
+		case RET_LOOP: // fallthrough to default	
+		case RET_LOOPZ_OR_LOOPE: // fallthrough to default	
+		case RET_LOOPNZ_OR_LOOPNE: // fallthrough to default	
+		case RET_JCXZ: // fallthrough to default
 		case UNIDENTIFIED: // fallthrough to default
 		default:
 			is_needed = false;
@@ -326,9 +418,9 @@ void determine_instruction_length(InstructionInfo& info, char first_byte, char s
 			break;
 		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
 		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case CMP_IMMEDIATE_TO_ACCUMULATOR:
+		case SUB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough
+		case SBB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough
+		case CMP_IMMEDIATE_WITH_ACCUMULATOR:
 			info.base_length = 1;
 			info.data_length = 1;
 			w_field_value = first_byte & 0b00000001;
@@ -347,21 +439,44 @@ void determine_instruction_length(InstructionInfo& info, char first_byte, char s
 			info.base_length = 2; 
 			info.displacement_length = determine_displacement_length_from_second_byte(second_byte);
 			break;
+		case RET_JE_OR_JZE: // fallthrough
+		case RET_JL_OR_JNGE: // fallthrough
+		case RET_JLE_OR_JNG: // fallthrough
+		case RET_JB_OR_JNA: // fallthrough
+		case RET_JBE_OR_JNA: // fallthrough
+		case RET_JP_OR_JPE: // fallthrough
+		case RET_JO: // fallthrough
+		case RET_JS: // fallthrough
+		case RET_JNE_OR_JNZ: // fallthrough
+		case RET_JNL_OR_JGE: // fallthrough
+		case RET_JNLE_OR_JG: // fallthrough
+		case RET_JNB_OR_JAE: // fallthrough
+		case RET_JNBE_OR_JA: // fallthrough
+		case RET_JNP_OR_JPO: // fallthrough
+		case RET_JNO: // fallthrough
+		case RET_JNS: // fallthrough
+		case RET_LOOP: // fallthrough
+		case RET_LOOPZ_OR_LOOPE: // fallthrough
+		case RET_LOOPNZ_OR_LOOPNE: // fallthrough
+		case RET_JCXZ: 
+			info.base_length = 1;
+			info.ip_inc8_length = 1;
+			break;
 		case InstructionTypeEnumLength: // fallthrough to default
 		case UNIDENTIFIED: // fallthrough to default
 		default:
 			break;
 	}
-	info.instruction_length = info.base_length + info.displacement_length + info.data_length + info.address_length;
+	info.instruction_length = info.base_length + info.displacement_length + info.data_length + info.address_length + info.ip_inc8_length;
 }
 
 void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INSTRUCTION_LENGTH > & instruction_data) {
+	assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length + info.ip_inc8_length);
 	switch (info.type) {
 		case InstructionType::MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER:
 			assert(info.base_length == 2);
 			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
 			assert(info.data_length == 0 && info.address_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 			info.instruction_d = (instruction_data[0] & 0b00000010) > 1;
 			info.instruction_w = instruction_data[0] & 0b00000001;
@@ -382,7 +497,6 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
 			assert(info.data_length == 1 || info.data_length == 2);
 			assert(info.address_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 			info.instruction_w = instruction_data[0] & 0b00000001;
 			info.instruction_mod = (instruction_data[1] & 0b11000000) >> 6;
@@ -410,7 +524,6 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			assert(info.base_length == 1);
 			assert(info.data_length == 1 || info.data_length == 2);
 			assert(info.displacement_length == 0 && info.address_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 			info.instruction_w = (instruction_data[0] & 0b00001000) >> 3;
 			info.instruction_reg = instruction_data[0] & 0b00000111;
@@ -428,7 +541,6 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			assert(info.base_length == 1);
 			assert(info.address_length == 2);
 			assert(info.displacement_length == 0 && info.data_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 
 			info.instruction_w = (instruction_data[0] & 0b00001000) >> 3;
@@ -440,7 +552,6 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			assert(info.base_length == 2);
 			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
 			assert(info.address_length == 0 && info.data_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 			info.instruction_mod = (instruction_data[1] & 0b11000000) >> 6;
 			info.instruction_sr = (instruction_data[0] & 0b00011000) >> 3;
@@ -460,7 +571,6 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			assert(info.base_length == 2);
 			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
 			assert(info.data_length == 1 || info.data_length == 2 && info.address_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 			info.instruction_s = (instruction_data[0] & 0b00000010) > 1;
 			info.instruction_w = instruction_data[0] & 0b00000001;
@@ -490,7 +600,6 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			assert(info.base_length == 2);
 			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
 			assert(info.data_length == 0 && info.address_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 			info.instruction_d = (instruction_data[0] & 0b00000010) > 1;
 			info.instruction_w = instruction_data[0] & 0b00000001;
@@ -508,13 +617,12 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			break;
 		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
 		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case CMP_IMMEDIATE_TO_ACCUMULATOR:
+		case SUB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough
+		case SBB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough
+		case CMP_IMMEDIATE_WITH_ACCUMULATOR:
 			assert(info.base_length == 1);
 			assert(info.data_length == 1 || info.data_length == 2);
 			assert(info.displacement_length == 0 && info.address_length == 0);
-			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
 
 			info.instruction_w = instruction_data[0] & 0b00000001;
 			
@@ -524,6 +632,28 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 				info.instruction_data_field = instruction_data[1];
 				info.instruction_data_extended_field = instruction_data[2];
 			}
+			break;
+		case RET_JE_OR_JZE: // fallthrough
+		case RET_JL_OR_JNGE: // fallthrough
+		case RET_JLE_OR_JNG: // fallthrough
+		case RET_JB_OR_JNA: // fallthrough
+		case RET_JBE_OR_JNA: // fallthrough
+		case RET_JP_OR_JPE: // fallthrough
+		case RET_JO: // fallthrough
+		case RET_JS: // fallthrough
+		case RET_JNE_OR_JNZ: // fallthrough
+		case RET_JNL_OR_JGE: // fallthrough
+		case RET_JNLE_OR_JG: // fallthrough
+		case RET_JNB_OR_JAE: // fallthrough
+		case RET_JNBE_OR_JA: // fallthrough
+		case RET_JNP_OR_JPO: // fallthrough
+		case RET_JNO: // fallthrough
+		case RET_JNS: // fallthrough
+		case RET_LOOP: // fallthrough
+		case RET_LOOPZ_OR_LOOPE: // fallthrough
+		case RET_LOOPNZ_OR_LOOPNE: // fallthrough
+		case RET_JCXZ: 
+			info.instruction_ip_inc8 = instruction_data[1];
 			break;
 		case InstructionTypeEnumLength: // fallthrough to default
 		case UNIDENTIFIED: // fallthrough to default
@@ -550,6 +680,7 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 	std::string src_operand = "";
 	std::string dst_operand = "";
 	std::string immediate_size_string = "";
+	std::string displacement_size_string = "";
 
 	short immediate_value = 0; 
 	short address_value = 0;
@@ -568,9 +699,9 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
 			break;
 		case MOV_IMMEDIATE_TO_REGISTER_OR_MEMORY:
-			if (info.data_length == 1) {
+			if (info.instruction_w == 0) {
 				immediate_size_string = "BYTE";
-			} else if (info.data_length == 2) {
+			} else if (info.instruction_w == 1) {
 				immediate_size_string = "WORD";
 			}
 			immediate_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_data_field, info.instruction_data_extended_field); // if data_length is 1, then info.instruction_data_extended_field is zero!
@@ -581,10 +712,9 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			disassembly = mnemonic + " " + dst_operand + ", " + immediate_size_string + " " + src_operand;
 			break;
 		case MOV_IMMEDIATE_TO_REGISTER:
-			if (info.data_length == 1) {
+			if (info.instruction_w == 0) {
 				immediate_size_string = "BYTE";
-				//immediate_value = info.instruction_data_field; // sign extend cast the char to short
-			} else if (info.data_length == 2) {
+			} else if (info.instruction_w == 1) {
 				immediate_size_string = "WORD";
 			}
 			immediate_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_data_field, info.instruction_data_extended_field); // if data_length is 1, then info.instruction_data_extended_field is zero!
@@ -619,17 +749,17 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 		case MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY:
 			break;
 		case ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY:
-			if (info.data_length == 1) {
-				immediate_size_string = "BYTE";
-			} else if (info.data_length == 2) {
-				immediate_size_string = "WORD";
+			if (info.instruction_w == 0) {
+				displacement_size_string = "BYTE";
+			} else if (info.instruction_w == 1) {
+				displacement_size_string = "WORD";
 			}
 			immediate_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_data_field, info.instruction_data_extended_field); // if data_length is 1, then info.instruction_data_extended_field is zero!
 
 			src_operand =  std::to_string(immediate_value);
 			dst_operand = instruction_decode_effective_address(info, info.instruction_rm);
 
-			disassembly = mnemonic + " " + dst_operand + ", " + immediate_size_string + " " + src_operand;
+			disassembly = mnemonic + " " + displacement_size_string + " " + dst_operand + ", " + src_operand;
 			break;
 		case ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
@@ -648,9 +778,9 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			break;
 		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
 		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
-		case CMP_IMMEDIATE_TO_ACCUMULATOR: 
+		case SUB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough
+		case SBB_IMMEDIATE_FROM_ACCUMULATOR: // fallthrough
+		case CMP_IMMEDIATE_WITH_ACCUMULATOR: 
 			assert(info.data_length == 1 || info.data_length == 2);
 
 			if (info.data_length == 1) {
@@ -663,9 +793,40 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			src_operand = std::to_string(immediate_value);
 			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
 			break;
+		case RET_JE_OR_JZE: // fallthrough
+		case RET_JL_OR_JNGE: // fallthrough
+		case RET_JLE_OR_JNG: // fallthrough
+		case RET_JB_OR_JNA: // fallthrough
+		case RET_JBE_OR_JNA: // fallthrough
+		case RET_JP_OR_JPE: // fallthrough
+		case RET_JO: // fallthrough
+		case RET_JS: // fallthrough
+		case RET_JNE_OR_JNZ: // fallthrough
+		case RET_JNL_OR_JGE: // fallthrough
+		case RET_JNLE_OR_JG: // fallthrough
+		case RET_JNB_OR_JAE: // fallthrough
+		case RET_JNBE_OR_JA: // fallthrough
+		case RET_JNP_OR_JPO: // fallthrough
+		case RET_JNO: // fallthrough
+		case RET_JNS: // fallthrough
+		case RET_LOOP: // fallthrough
+		case RET_LOOPZ_OR_LOOPE: // fallthrough
+		case RET_LOOPNZ_OR_LOOPNE: // fallthrough
+		case RET_JCXZ: 
+			// +2 is the length of all of these instructions, its a nasm encoding hack for the instruction offset in the RET-type instruction, so we dont have to use labels here.
+			immediate_value = info.instruction_ip_inc8 + 2;
+			
+			if (immediate_value >= 0) {
+				dst_operand = "$+" + std::to_string(immediate_value); // the plus sign is crucial for nasm here!
+			} else {
+				dst_operand = "$" + std::to_string(immediate_value); // the minus sign is already there in this case
+			}
+			disassembly = mnemonic + " " + dst_operand;
+			break;
 		default:
 			disassembly = "";
 			break;
+
 	}
 	return disassembly;
 }
@@ -696,16 +857,76 @@ std::string determine_mnemonic_from_info(const InstructionInfo& info) {
 			mnemonic = "ADC";
 			break;
 		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
-		case SUB_IMMEDIATE_TO_ACCUMULATOR:
+		case SUB_IMMEDIATE_FROM_ACCUMULATOR:
 			mnemonic = "SUB";
 			break;
 		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
-		case SBB_IMMEDIATE_TO_ACCUMULATOR:
+		case SBB_IMMEDIATE_FROM_ACCUMULATOR:
 			mnemonic = "SBB";
 			break;
 		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
-		case CMP_IMMEDIATE_TO_ACCUMULATOR:
+		case CMP_IMMEDIATE_WITH_ACCUMULATOR:
 			mnemonic = "CMP";
+			break;
+		case RET_JE_OR_JZE: 
+			mnemonic = "JE";
+			break;
+		case RET_JL_OR_JNGE: 
+			mnemonic = "JL";
+			break;
+		case RET_JLE_OR_JNG: 
+			mnemonic = "JLE";
+			break;
+		case RET_JB_OR_JNA:  
+			mnemonic = "JB";
+			break;
+		case RET_JBE_OR_JNA: 
+			mnemonic = "JBE";
+			break;
+		case RET_JP_OR_JPE:
+			mnemonic = "JP";
+			break;
+		case RET_JO: 
+			mnemonic = "JO";
+			break;
+		case RET_JS: 
+			mnemonic = "JS";
+			break;
+		case RET_JNE_OR_JNZ:
+			mnemonic = "JNE";
+			break;
+		case RET_JNL_OR_JGE:
+			mnemonic = "JNL";
+			break;
+		case RET_JNLE_OR_JG:
+			mnemonic = "JNLE";
+			break;
+		case RET_JNB_OR_JAE: 
+			mnemonic = "JNB";
+			break;
+		case RET_JNBE_OR_JA: 
+			mnemonic = "JNBE";
+			break;
+		case RET_JNP_OR_JPO: 
+			mnemonic = "JNP";
+			break;
+		case RET_JNO: 
+			mnemonic = "JNO";
+			break;
+		case RET_JNS: 
+			mnemonic = "JNS";
+			break;
+		case RET_LOOP: 
+			mnemonic = "LOOP";
+			break;
+		case RET_LOOPZ_OR_LOOPE: 
+			mnemonic = "LOOPZ";
+			break;
+		case RET_LOOPNZ_OR_LOOPNE: 
+			mnemonic = "LOOPNZ";
+			break;
+		case RET_JCXZ: 
+			mnemonic = "JCXZ";
 			break;
 		case InstructionTypeEnumLength: // fallthrough to default
 		default:

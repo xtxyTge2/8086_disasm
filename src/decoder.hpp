@@ -36,15 +36,37 @@ enum InstructionType {
 
 	// SUB
 	SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
-	SUB_IMMEDIATE_TO_ACCUMULATOR,
+	SUB_IMMEDIATE_FROM_ACCUMULATOR,
 
 	// SBB
 	SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
-	SBB_IMMEDIATE_TO_ACCUMULATOR,
+	SBB_IMMEDIATE_FROM_ACCUMULATOR,
 
 	// CMP
 	CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
-	CMP_IMMEDIATE_TO_ACCUMULATOR,
+	CMP_IMMEDIATE_WITH_ACCUMULATOR,
+
+	// RET
+	RET_JE_OR_JZE,
+	RET_JL_OR_JNGE,
+	RET_JLE_OR_JNG,
+	RET_JB_OR_JNA,
+	RET_JBE_OR_JNA,
+	RET_JP_OR_JPE,
+	RET_JO,
+	RET_JS,
+	RET_JNE_OR_JNZ,
+	RET_JNL_OR_JGE,
+	RET_JNLE_OR_JG,
+	RET_JNB_OR_JAE,
+	RET_JNBE_OR_JA,
+	RET_JNP_OR_JPO,
+	RET_JNO,
+	RET_JNS,
+	RET_LOOP,
+	RET_LOOPZ_OR_LOOPE,
+	RET_LOOPNZ_OR_LOOPNE,
+	RET_JCXZ,
 
 	InstructionTypeEnumLength
 };
@@ -52,11 +74,13 @@ enum InstructionType {
 constexpr static unsigned int MAX_INSTRUCTION_LENGTH = 6;
 struct InstructionInfo{
 	InstructionType type = InstructionType::UNIDENTIFIED;
+
 	unsigned int instruction_length = 0; // instruction_length = base_length + displacement_length + data_length + address_length
 	unsigned int base_length = 0;
 	unsigned int displacement_length = 0; // either 0, 1 or 2. 0 means no displacement, 1 means just disp-lo is set, 2 means disp-lo and disp-hi are set.
 	unsigned int data_length = 0;
 	unsigned int address_length = 0;
+	unsigned int ip_inc8_length = 0;
 
 	char instruction_d = 0;
 	char instruction_s = 0;
@@ -75,6 +99,8 @@ struct InstructionInfo{
 
 	char instruction_address_lo = 0;
 	char instruction_address_hi = 0;
+
+	char instruction_ip_inc8 = 0;
 };
 
 struct Instruction {
