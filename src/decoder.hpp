@@ -13,6 +13,8 @@ std::string read_entire_file(const std::string& filename);
 
 enum InstructionType {
 	UNIDENTIFIED,
+
+	// MOV
 	MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER,
 	MOV_IMMEDIATE_TO_REGISTER_OR_MEMORY,
 	MOV_IMMEDIATE_TO_REGISTER,
@@ -20,6 +22,29 @@ enum InstructionType {
 	MOV_ACCUMULATOR_TO_MEMORY,
 	MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER,
 	MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY,
+	
+	// GENERAL ARITHMETIC TYPE, WHICH SAVES US TO REPEAT THE SAME PARSING FOR ADD, ADC, SUB, SBB, CMP. The mnemonic is encoded in the reg field.
+	ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY,
+	
+	// ADD 
+	ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
+	ADD_IMMEDIATE_TO_ACCUMULATOR,
+
+	// ADC
+	ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
+	ADC_IMMEDIATE_TO_ACCUMULATOR,
+
+	// SUB
+	SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
+	SUB_IMMEDIATE_TO_ACCUMULATOR,
+
+	// SBB
+	SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
+	SBB_IMMEDIATE_TO_ACCUMULATOR,
+
+	// CMP
+	CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER,
+	CMP_IMMEDIATE_TO_ACCUMULATOR,
 
 	InstructionTypeEnumLength
 };
@@ -34,7 +59,9 @@ struct InstructionInfo{
 	unsigned int address_length = 0;
 
 	char instruction_d = 0;
+	char instruction_s = 0;
 	char instruction_w = 0;
+	char instruction_v = 0;
 	char instruction_mod = 0;
 	char instruction_reg = 0;
 	char instruction_rm = 0;
@@ -48,9 +75,6 @@ struct InstructionInfo{
 
 	char instruction_address_lo = 0;
 	char instruction_address_hi = 0;
-
-	char instruction_s = 0;
-	char instruction_v = 0;
 };
 
 struct Instruction {
@@ -58,6 +82,8 @@ struct Instruction {
 	std::string src_operand = "";
 	std::string dst_operand = "";
 };
+
+
 
 InstructionInfo parse_instruction_type(char data);
 void determine_instruction_length(InstructionInfo& info, char first_byte, char second_byte);
@@ -78,4 +104,6 @@ std::string get_binary_string_of_byte(char c);
 bool is_next_byte_needed_to_determine_length(InstructionInfo& info);
 unsigned int determine_displacement_length_from_second_byte(char data);
 
+std::string determine_mnemonic_from_info(const InstructionInfo& info);
+std::string determine_mnemonic_for_arithmetic_instruction_type_from_reg_field(const InstructionInfo& info);
 std::string instruction_decode_effective_address(const InstructionInfo& info, char register_decode_value);

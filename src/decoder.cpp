@@ -4,7 +4,7 @@ int main(int args, const char** argv) {
 
 	bool use_hard_coded_path = false;
 	if (use_hard_coded_path) {
-		std::string filename = "C:\\Users\\kala\\code\\computer_enhance_solutions\\computer_enhance\\perfaware\\part1\\listing_0039_more_movs";
+		std::string filename = "C:\\Users\\kala\\code\\computer_enhance_solutions\\computer_enhance\\perfaware\\part1\\listing_0041_add_sub_cmp_jnz";
 		std::string file_contents = read_entire_file(filename);
 		std::string result = parse(file_contents);
 
@@ -48,6 +48,7 @@ std::string parse(const std::string& contents) {
 
 		// get unfilled instruction info struct, containing the opcode and the length of the instruction. 
 		InstructionInfo current_info = parse_instruction_type(current_byte);
+		assert(current_info.type != InstructionType::UNIDENTIFIED);
 
 		bool is_next_byte_needed_for_length = is_next_byte_needed_to_determine_length(current_info);
 		char next_byte = 0; // set it to zero
@@ -136,6 +137,21 @@ InstructionInfo parse_instruction_type(char data) {
 			case 0b10100010:
 				info.type = InstructionType::MOV_ACCUMULATOR_TO_MEMORY;
 				break;
+			case 0b00000100:
+				info.type = InstructionType::ADD_IMMEDIATE_TO_ACCUMULATOR;
+				break;
+			case 00010100:
+				info.type = InstructionType::ADC_IMMEDIATE_TO_ACCUMULATOR;
+				break;
+			case 0b00101100:
+				info.type = InstructionType::SUB_IMMEDIATE_TO_ACCUMULATOR;
+				break;
+			case 0b00011100: 
+				info.type = InstructionType::SBB_IMMEDIATE_TO_ACCUMULATOR;
+				break;
+			case 0b00111100: 
+				info.type = InstructionType::CMP_IMMEDIATE_TO_ACCUMULATOR;
+				break;
 			default:
 				break;
 		}
@@ -144,14 +160,32 @@ InstructionInfo parse_instruction_type(char data) {
 	if (info.type == InstructionType::UNIDENTIFIED) {
 		// parse instructions, uniquely identified by first six bits, last two bits arbitrary
 
-		// CAREFUL: zero extend the char and consider it as an integer, otherwise we cant use binary literals in the switch statement below, 
+		// CAREFUL: zero extend the char and consider it as an int, otherwise we cant use binary literals in the switch statement below, 
 		// binary literals are of type int.
 
 		// check 6-bits
 		int value_6_bits_masked = data & 0b11111100;
 		switch (value_6_bits_masked) {
-			case 0b10001000: // MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER
+			case 0b10001000: 
 				info.type = InstructionType::MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER;
+				break;
+			case 0b10000000: 
+				info.type = InstructionType::ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY;
+				break;
+			case 0b00000000:
+				info.type = InstructionType::ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER;
+				break;
+			case 0b00010000:
+				info.type = InstructionType::ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER;
+				break;
+			case 0b00101000: 
+				info.type = InstructionType::SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER;
+				break;
+			case 0b00011000: 
+				info.type = InstructionType::SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER;
+				break;
+			case 0b00111000: 
+				info.type = InstructionType::CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER;
 				break;
 			default:
 				break;
@@ -192,15 +226,27 @@ bool is_next_byte_needed_to_determine_length(InstructionInfo& info) {
 		case MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER:  // fallthrough
 		case MOV_IMMEDIATE_TO_REGISTER_OR_MEMORY: // fallthrough
 		case MOV_IMMEDIATE_TO_REGISTER: // fallthrough
-		case MOV_MEMORY_TO_ACCUMULATOR: // fallthrough
-		case MOV_ACCUMULATOR_TO_MEMORY: // fallthrough
 		case MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER: // fallthrough
 		case MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY: // fallthrough
+		case ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY: // fallthrough
+		case ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
 			is_needed = true;
 			break;
-		case InstructionTypeEnumLength: // fallthrough to default
+		case InstructionTypeEnumLength: // fallthrough to default	
+		case MOV_MEMORY_TO_ACCUMULATOR: // fallthrough to default	
+		case MOV_ACCUMULATOR_TO_MEMORY: // fallthrough to default	
+		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
+		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
+		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
+		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
+		case CMP_IMMEDIATE_TO_ACCUMULATOR: // fallthrough to default	
 		case UNIDENTIFIED: // fallthrough to default
 		default:
+			is_needed = false;
 			break;
 	}
 	return is_needed;
@@ -237,13 +283,9 @@ unsigned int determine_displacement_length_from_second_byte(char data) {
 
 
 void determine_instruction_length(InstructionInfo& info, char first_byte, char second_byte) {
-
 	int w_field_value = 0;
+	int s_field_value = 0;
 	switch (info.type) {
-		case MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER:
-			info.base_length = 2;
-			info.displacement_length = determine_displacement_length_from_second_byte(second_byte);
-			break;
 		case MOV_IMMEDIATE_TO_REGISTER_OR_MEMORY:
 			info.base_length = 2; 
 			info.displacement_length = determine_displacement_length_from_second_byte(second_byte);
@@ -263,19 +305,45 @@ void determine_instruction_length(InstructionInfo& info, char first_byte, char s
 				info.data_length = 2;
 			}
 			break;
-		case MOV_MEMORY_TO_ACCUMULATOR:
-			info.base_length = 1;
-			info.address_length = 2;
-			break;
+		case MOV_MEMORY_TO_ACCUMULATOR: // fallthrough
 		case MOV_ACCUMULATOR_TO_MEMORY:
 			info.base_length = 1;
 			info.address_length = 2;
 			break;
-		case MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER:
-			info.base_length = 2; 
+	
+		case ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY:
+			info.base_length = 2;
 			info.displacement_length = determine_displacement_length_from_second_byte(second_byte);
+			
+			w_field_value = first_byte & 0b00000001;
+			s_field_value = first_byte & 0b00000010;
+			
+			if (s_field_value == 0 && w_field_value == 1) {
+				info.data_length = 2;
+			} else {
+				info.data_length = 1;
+			}
 			break;
-		case MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY:
+		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case CMP_IMMEDIATE_TO_ACCUMULATOR:
+			info.base_length = 1;
+			info.data_length = 1;
+			w_field_value = first_byte & 0b00000001;
+			if (w_field_value) {
+				info.data_length = 2;
+			}
+			break;
+		case MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER: // fallthrough
+		case MOV_REGISTER_OR_MEMORY_TO_SEGMENT_REGISTER: // fallthrough
+		case MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY: // fallthrough
+		case ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:
 			info.base_length = 2; 
 			info.displacement_length = determine_displacement_length_from_second_byte(second_byte);
 			break;
@@ -388,6 +456,75 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 			}
 
 			break;
+		case ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY:
+			assert(info.base_length == 2);
+			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
+			assert(info.data_length == 1 || info.data_length == 2 && info.address_length == 0);
+			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
+
+			info.instruction_s = (instruction_data[0] & 0b00000010) > 1;
+			info.instruction_w = instruction_data[0] & 0b00000001;
+			info.instruction_mod = (instruction_data[1] & 0b11000000) >> 6;
+			info.instruction_reg = (instruction_data[1] & 0b00111000) >> 3;
+			info.instruction_rm = instruction_data[1] & 0b00000111;
+
+			if (info.displacement_length > 0) {
+				if (info.displacement_length == 1) {
+					info.instruction_disp_lo = instruction_data[2];
+				} else if (info.displacement_length == 2) {
+					info.instruction_disp_lo = instruction_data[2];
+					info.instruction_disp_hi = instruction_data[3];
+				}
+			}
+
+			info.instruction_data_field = instruction_data[info.base_length + info.displacement_length];
+			if (info.data_length == 2) {
+				info.instruction_data_extended_field = instruction_data[info.base_length + info.displacement_length + 1];
+			}
+			break;
+		case ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:
+			assert(info.base_length == 2);
+			assert(info.displacement_length == 0 || info.displacement_length == 1 || info.displacement_length == 2);
+			assert(info.data_length == 0 && info.address_length == 0);
+			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
+
+			info.instruction_d = (instruction_data[0] & 0b00000010) > 1;
+			info.instruction_w = instruction_data[0] & 0b00000001;
+			info.instruction_mod = (instruction_data[1] & 0b11000000) >> 6;
+			info.instruction_reg = (instruction_data[1] & 0b00111000) >> 3;
+			info.instruction_rm = instruction_data[1] & 0b00000111;
+			if (info.displacement_length > 0) {
+				if (info.displacement_length == 1) {
+					info.instruction_disp_lo = instruction_data[2];
+				} else if (info.displacement_length == 2) {
+					info.instruction_disp_lo = instruction_data[2];
+					info.instruction_disp_hi = instruction_data[3];
+				}
+			}
+			break;
+		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case CMP_IMMEDIATE_TO_ACCUMULATOR:
+			assert(info.base_length == 1);
+			assert(info.data_length == 1 || info.data_length == 2);
+			assert(info.displacement_length == 0 && info.address_length == 0);
+			assert(info.instruction_length == info.base_length + info.displacement_length + info.data_length + info.address_length);
+
+			info.instruction_w = instruction_data[0] & 0b00000001;
+			
+			if (info.data_length == 1) {
+				info.instruction_data_field = instruction_data[1];
+			} else if (info.data_length == 2) {
+				info.instruction_data_field = instruction_data[1];
+				info.instruction_data_extended_field = instruction_data[2];
+			}
+			break;
 		case InstructionTypeEnumLength: // fallthrough to default
 		case UNIDENTIFIED: // fallthrough to default
 		default:
@@ -409,7 +546,7 @@ std::string parse_instruction_infos(const std::vector < InstructionInfo > & inst
 std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 	std::string disassembly = "";
 	
-	std::string mnemonic = "";
+	std::string mnemonic = determine_mnemonic_from_info(info);
 	std::string src_operand = "";
 	std::string dst_operand = "";
 	std::string immediate_size_string = "";
@@ -419,7 +556,6 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 
 	switch (info.type) {
 		case MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER:
-			mnemonic = "MOV";
 			dst_operand = instruction_decode_effective_address(info, info.instruction_rm);
 			src_operand = decode_register_name(info.instruction_reg, info.instruction_w);
 
@@ -432,7 +568,6 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
 			break;
 		case MOV_IMMEDIATE_TO_REGISTER_OR_MEMORY:
-			mnemonic = "MOV";
 			if (info.data_length == 1) {
 				immediate_size_string = "BYTE";
 			} else if (info.data_length == 2) {
@@ -446,8 +581,6 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			disassembly = mnemonic + " " + dst_operand + ", " + immediate_size_string + " " + src_operand;
 			break;
 		case MOV_IMMEDIATE_TO_REGISTER:
-			mnemonic = "MOV";
-
 			if (info.data_length == 1) {
 				immediate_size_string = "BYTE";
 				//immediate_value = info.instruction_data_field; // sign extend cast the char to short
@@ -462,7 +595,6 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			disassembly = mnemonic + " " + dst_operand + ", " + immediate_size_string + " " + src_operand;
 			break;
 		case MOV_MEMORY_TO_ACCUMULATOR:
-			mnemonic = "MOV";
 			assert(info.address_length == 2);
 
 			address_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_address_lo, info.instruction_address_hi);
@@ -473,7 +605,6 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
 			break;
 		case MOV_ACCUMULATOR_TO_MEMORY:
-			mnemonic = "MOV";
 			assert(info.address_length == 2);
 
 			address_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_address_lo, info.instruction_address_hi);
@@ -487,12 +618,130 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			break;
 		case MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY:
 			break;
+		case ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY:
+			if (info.data_length == 1) {
+				immediate_size_string = "BYTE";
+			} else if (info.data_length == 2) {
+				immediate_size_string = "WORD";
+			}
+			immediate_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_data_field, info.instruction_data_extended_field); // if data_length is 1, then info.instruction_data_extended_field is zero!
+
+			src_operand =  std::to_string(immediate_value);
+			dst_operand = instruction_decode_effective_address(info, info.instruction_rm);
+
+			disassembly = mnemonic + " " + dst_operand + ", " + immediate_size_string + " " + src_operand;
+			break;
+		case ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER: // fallthrough
+			dst_operand = instruction_decode_effective_address(info, info.instruction_rm);
+			src_operand = decode_register_name(info.instruction_reg, info.instruction_w);
+
+			// if the d field is set swap the order of the dst, src registers.
+			if (info.instruction_d) {
+				std::swap(src_operand, dst_operand);
+			}
+
+			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
+			break;
+		case ADD_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case ADC_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case SUB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case SBB_IMMEDIATE_TO_ACCUMULATOR: // fallthrough
+		case CMP_IMMEDIATE_TO_ACCUMULATOR: 
+			assert(info.data_length == 1 || info.data_length == 2);
+
+			if (info.data_length == 1) {
+				dst_operand = "AL";
+				immediate_value = info.instruction_data_field; // sign extend this here!
+			} else {
+				dst_operand = "AX";
+				immediate_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_data_field, info.instruction_data_extended_field);
+			}
+			src_operand = std::to_string(immediate_value);
+			disassembly = mnemonic + " " + dst_operand + ", " + src_operand;
+			break;
 		default:
 			disassembly = "";
 			break;
 	}
 	return disassembly;
 }
+
+
+std::string determine_mnemonic_from_info(const InstructionInfo& info) {
+	std::string mnemonic = "UNKNOWN_MNEMONIC";
+	switch (info.type) {
+		case UNIDENTIFIED:
+			break;
+		case MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER: // fallthrough
+		case MOV_IMMEDIATE_TO_REGISTER_OR_MEMORY: // fallthrough
+		case MOV_IMMEDIATE_TO_REGISTER: // fallthrough
+		case MOV_MEMORY_TO_ACCUMULATOR: // fallthrough
+		case MOV_ACCUMULATOR_TO_MEMORY: // fallthrough
+		case MOV_SEGMENT_REGISTER_TO_REGISTER_OR_MEMORY: // fallthrough
+			mnemonic = "MOV";
+			break;
+		case ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY:
+			mnemonic = determine_mnemonic_for_arithmetic_instruction_type_from_reg_field(info);
+			break;
+		case ADD_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
+		case ADD_IMMEDIATE_TO_ACCUMULATOR:
+			mnemonic = "ADD";
+			break;
+		case ADC_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
+		case ADC_IMMEDIATE_TO_ACCUMULATOR:
+			mnemonic = "ADC";
+			break;
+		case SUB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
+		case SUB_IMMEDIATE_TO_ACCUMULATOR:
+			mnemonic = "SUB";
+			break;
+		case SBB_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
+		case SBB_IMMEDIATE_TO_ACCUMULATOR:
+			mnemonic = "SBB";
+			break;
+		case CMP_REGISTER_OR_MEMORY_WITH_REGISTER_TO_EITHER:  // fallthrough
+		case CMP_IMMEDIATE_TO_ACCUMULATOR:
+			mnemonic = "CMP";
+			break;
+		case InstructionTypeEnumLength: // fallthrough to default
+		default:
+			break;
+	}
+	return mnemonic;
+}
+
+std::string determine_mnemonic_for_arithmetic_instruction_type_from_reg_field(const InstructionInfo& info) {
+	assert(info.type == InstructionType::ARITHMETIC_IMMEDIATE_TO_OR_WITH_REGISTER_OR_MEMORY);
+	std::string mnemonic = "";
+
+	int reg_value = info.instruction_reg; // use int value so we can use binary literals in the switch statement!
+	switch (reg_value) {
+		case 0b00000000:
+			mnemonic = "ADD";
+			break;
+		case 0b00000010:
+			mnemonic = "ADC";
+			break;
+		case 0b00000101:
+			mnemonic = "SUB";
+			break;
+		case 0b00000011:
+			mnemonic = "SBB";
+			break;
+		case 0b00000111:
+			mnemonic = "CMP";
+			break;
+		default:
+			mnemonic = "UNKNOWN_ARITHMETIC_MNEMONIC_FROM_REG_FIELD";
+			break;
+	}
+	return mnemonic;
+}
+
 
 short stitch_lower_and_higher_bytes_to_2_byte_value(char lower, char higher) {
 	short lower_byte_as_short = lower; // sign extend cast the char to short
@@ -550,8 +799,6 @@ std::string instruction_decode_effective_address(const InstructionInfo& info, ch
 		}
 		if (info.displacement_length > 0) {
 			short displacement_value = 0;
-			short displacement_lower_byte_as_short = 0;
-			short displacement_higher_byte_as_short = 0;
 			if (info.displacement_length == 1) {
 				displacement_value = info.instruction_disp_lo; // sign extend cast the char to short, this is different than putting the lower byte into a 2 byte value, as  we said we need to sign extend here!
 			} else if (info.displacement_length == 2) {
