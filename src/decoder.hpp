@@ -69,6 +69,7 @@ void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INS
 std::string parse_instruction_infos(const std::vector < InstructionInfo > & instruction_infos);
 std::string disassemble_instruction_from_info(const InstructionInfo& info);
 std::string decode_register_name(char instruction_rm, char instruction_w);
+short stitch_lower_and_higher_bytes_to_2_byte_value(char lower, char higher);
 
 std::string get_binary_string(const std::string& contents);
 std::string get_binary_string_of_byte(char c);

@@ -414,12 +414,8 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 	std::string dst_operand = "";
 	std::string immediate_size_string = "";
 
-	short immediate_lower_byte_as_short = 0; // short which stores the lower byte of the immediate value in its lowest byte
-	short immediate_higher_byte_as_short = 0; // short which stores the higher byte of the immediate value in its highest byte
 	short immediate_value = 0; 
 	short address_value = 0;
-	short address_lower_byte_as_short = 0;
-	short address_higher_byte_as_short = 0;
 
 	switch (info.type) {
 		case MOV_REGISTER_OR_MEMORY_TO_OR_FROM_REGISTER:
@@ -439,16 +435,11 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			mnemonic = "MOV";
 			if (info.data_length == 1) {
 				immediate_size_string = "BYTE";
-				immediate_value = info.instruction_data_field; // sign extend cast the char to short
 			} else if (info.data_length == 2) {
 				immediate_size_string = "WORD";
-				immediate_lower_byte_as_short = info.instruction_data_field; // sign extend cast the char to short
-				immediate_lower_byte_as_short = immediate_lower_byte_as_short & 0x00ff; // dont want sign extension hence we cast the potential higher bits away, which might have been introduced by the cast
-				immediate_higher_byte_as_short = info.instruction_data_extended_field; // sign extend cast the char to short
-				immediate_higher_byte_as_short = immediate_higher_byte_as_short << 8; // shift it to the higher byte
-				immediate_value = immediate_higher_byte_as_short + immediate_lower_byte_as_short; 
-				// the above addition has the form 0xab00 + 0x00cd (= 0xabcd).
 			}
+			immediate_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_data_field, info.instruction_data_extended_field); // if data_length is 1, then info.instruction_data_extended_field is zero!
+
 			src_operand =  std::to_string(immediate_value);
 			dst_operand = instruction_decode_effective_address(info, info.instruction_rm);
 
@@ -459,16 +450,12 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 
 			if (info.data_length == 1) {
 				immediate_size_string = "BYTE";
-				immediate_value = info.instruction_data_field; // sign extend cast the char to short
+				//immediate_value = info.instruction_data_field; // sign extend cast the char to short
 			} else if (info.data_length == 2) {
 				immediate_size_string = "WORD";
-				immediate_lower_byte_as_short = info.instruction_data_field; // sign extend cast the char to short
-				immediate_lower_byte_as_short = immediate_lower_byte_as_short & 0x00ff; // dont want sign extension hence we cast the potential higher bits away, which might have been introduced by the cast
-				immediate_higher_byte_as_short = info.instruction_data_extended_field; // sign extend cast the char to short
-				immediate_higher_byte_as_short = immediate_higher_byte_as_short << 8; // shift it to the higher byte
-				immediate_value = immediate_higher_byte_as_short + immediate_lower_byte_as_short; 
-				// the above addition has the form 0xab00 + 0x00cd (= 0xabcd).
 			}
+			immediate_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_data_field, info.instruction_data_extended_field); // if data_length is 1, then info.instruction_data_extended_field is zero!
+
 			src_operand = std::to_string(immediate_value);
 			dst_operand = decode_register_name(info.instruction_reg, info.instruction_w);
 
@@ -478,12 +465,7 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			mnemonic = "MOV";
 			assert(info.address_length == 2);
 
-			address_lower_byte_as_short = info.instruction_address_lo; // sign extend cast the char to short
-			address_lower_byte_as_short = address_lower_byte_as_short & 0x00ff; // dont want sign extension hence we cast the potential higher bits away, which might have been introduced by the cast
-			address_higher_byte_as_short = info.instruction_address_hi; // sign extend cast the char to short
-			address_higher_byte_as_short = address_higher_byte_as_short << 8; // shift it to the higher byte
-			address_value = address_higher_byte_as_short + address_lower_byte_as_short;
-			// the above addition has the form 0xab00 + 0x00cd (= 0xabcd).
+			address_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_address_lo, info.instruction_address_hi);
 
 			src_operand = "[" + std::to_string(address_value) + "]";
 			dst_operand = "AX";
@@ -494,12 +476,7 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 			mnemonic = "MOV";
 			assert(info.address_length == 2);
 
-			address_lower_byte_as_short = info.instruction_address_lo; // sign extend cast the char to short
-			address_lower_byte_as_short = address_lower_byte_as_short & 0x00ff; // dont want sign extension hence we cast the potential higher bits away, which might have been introduced by the cast
-			address_higher_byte_as_short = info.instruction_address_hi; // sign extend cast the char to short
-			address_higher_byte_as_short = address_higher_byte_as_short << 8; // shift it to the higher byte
-			address_value = address_higher_byte_as_short + address_lower_byte_as_short;
-			// the above addition has the form 0xab00 + 0x00cd (= 0xabcd).
+			address_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_address_lo, info.instruction_address_hi);
 			
 			src_operand = "AX";
 			dst_operand = "[" + std::to_string(address_value) + "]";
@@ -517,6 +494,15 @@ std::string disassemble_instruction_from_info(const InstructionInfo& info) {
 	return disassembly;
 }
 
+short stitch_lower_and_higher_bytes_to_2_byte_value(char lower, char higher) {
+	short lower_byte_as_short = lower; // sign extend cast the char to short
+	lower_byte_as_short = lower_byte_as_short & 0x00ff; // dont want sign extension hence we cast the potential higher bits away, which might have been introduced by the cast
+	short higher_byte_as_short = higher; // sign extend cast the char to short
+	higher_byte_as_short = higher_byte_as_short << 8; // shift it to the higher byte
+
+	// the above addition has the form 0xab00 + 0x00cd (= 0xabcd).
+	return higher_byte_as_short + lower_byte_as_short;
+}
 
 std::string instruction_decode_effective_address(const InstructionInfo& info, char register_decode_value) {
 	bool is_direct_address_mode = false;
@@ -567,15 +553,11 @@ std::string instruction_decode_effective_address(const InstructionInfo& info, ch
 			short displacement_lower_byte_as_short = 0;
 			short displacement_higher_byte_as_short = 0;
 			if (info.displacement_length == 1) {
-				displacement_value = info.instruction_disp_lo; // sign extend cast the char to short
+				displacement_value = info.instruction_disp_lo; // sign extend cast the char to short, this is different than putting the lower byte into a 2 byte value, as  we said we need to sign extend here!
 			} else if (info.displacement_length == 2) {
-				displacement_lower_byte_as_short = info.instruction_disp_lo; // sign extend cast the char to short
-				displacement_lower_byte_as_short = displacement_lower_byte_as_short & 0x00ff; // dont want sign extension hence we cast the potential higher bits away, which might have been introduced by the cast
-				displacement_higher_byte_as_short = info.instruction_disp_hi; // sign extend cast the char to short
-				displacement_higher_byte_as_short = displacement_higher_byte_as_short << 8; // shift it to the higher byte
-				displacement_value = displacement_higher_byte_as_short + displacement_lower_byte_as_short;
-				// the above addition has the form 0xab00 + 0x00cd (= 0xabcd).
+				displacement_value = stitch_lower_and_higher_bytes_to_2_byte_value(info.instruction_disp_lo, info.instruction_disp_hi);
 			}
+			 
 
 			std::string displacement_value_sign_string = "";
 			std::string displacement_value_string = "";
