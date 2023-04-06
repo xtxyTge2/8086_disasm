@@ -16,11 +16,13 @@ public:
     ~DecoderWindow();
 
 private slots:
-    void open();
+    void openInputFile();
+    void openSolutionFile();
     void decodeInputText();
 
 private:
     Ui::DecoderWindow *ui;
     QString inputTextFileName;
+    QString solutionTextFileName;
 };
 #endif // DECODERWINDOW_H

@@ -103,13 +103,13 @@ constexpr static unsigned int MAX_INSTRUCTION_LENGTH = 6;
 struct InstructionInfo{
     InstructionType type = InstructionType::UNIDENTIFIED;
 
-    unsigned int instruction_length = 0; // instruction_length = base_length + displacement_length + data_length + address_length + ip_inc8_length + data8_length
-    unsigned int base_length = 0;
-    unsigned int displacement_length = 0; // either 0, 1 or 2. 0 means no displacement, 1 means just disp-lo is set, 2 means disp-lo and disp-hi are set.
-    unsigned int data_length = 0;
-    unsigned int address_length = 0;
-    unsigned int ip_inc8_length = 0;
-    unsigned int data8_length = 0;
+    int instruction_length = 0; // instruction_length = base_length + displacement_length + data_length + address_length + ip_inc8_length + data8_length
+    int base_length = 0;
+    int displacement_length = 0; // either 0, 1 or 2. 0 means no displacement, 1 means just disp-lo is set, 2 means disp-lo and disp-hi are set.
+    int data_length = 0;
+    int address_length = 0;
+    int ip_inc8_length = 0;
+    int data8_length = 0;
 
     char instruction_d = 0;
     char instruction_s = 0;
@@ -134,38 +134,51 @@ struct InstructionInfo{
     char instruction_data8 = 0;
 };
 
-struct Instruction {
-    std::string mnemonic = "";
-    std::string src_operand = "";
-    std::string dst_operand = "";
+struct DisassembledInstruction {
+    bool is_valid_disassembly = false;
+    std::string disassembly = "";
+    unsigned int starting_byte_position = 0;
+    unsigned int instruction_length_in_bytes = 0; // valid values are 0 <= instruction_length_in_bytes < MAX_INSTRUCTION_LENGTH
+    std::array<char, MAX_INSTRUCTION_LENGTH> instruction_data; // values after instruction_data[instruction_length_in_bytes - 1] are to be ignored.
+};
+
+class DecodingResult {
+public:
+    DecodingResult();
+
+    std::string to_string();
+
+public:
+    bool decoding_was_successful;
+    std::vector<DisassembledInstruction> disassembled_instructions_vector;
+};
+
+class Decoder {
+public:
+    Decoder();
+
+    DisassembledInstruction try_to_parse_instruction_from_input_stream_at_position(const std::string& input_stream, unsigned int current_byte_position);
+    DecodingResult try_to_parse_input_stream(const std::string& input_stream);
+
+private:
+    InstructionInfo parse_instruction_type(char data);
+    void determine_instruction_length(InstructionInfo& info, char first_byte, char second_byte);
+    void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INSTRUCTION_LENGTH > & instruction_data);
+    std::string parse_instruction_infos(const std::vector < InstructionInfo > & instruction_infos);
+    std::string disassemble_instruction_from_info(const InstructionInfo& info);
+    std::string decode_register_name(char instruction_rm, char instruction_w);
+    short stitch_lower_and_higher_bytes_to_2_byte_value(char lower, char higher);
+    std::string get_binary_string(const std::string& contents);
+    std::string get_binary_string_of_byte(char c);
+    bool is_next_byte_needed_to_determine_length(InstructionInfo& info);
+    unsigned int determine_displacement_length_from_second_byte(char data);
+    std::string determine_mnemonic_from_info(const InstructionInfo& info);
+    std::string determine_mnemonic_for_arithmetic_instruction_type_from_reg_field(const InstructionInfo& info);
+    std::string instruction_decode_effective_address(const InstructionInfo& info, char register_decode_value);
 };
 
 
-std::string parse(const std::string& contents);
 std::string read_entire_file(const std::string& filename);
-
-InstructionInfo parse_instruction_type(char data);
-void determine_instruction_length(InstructionInfo& info, char first_byte, char second_byte);
-
-
-void fill_out_instruction_info(InstructionInfo& info, std::array < char, MAX_INSTRUCTION_LENGTH > & instruction_data);
-
-
-std::string parse_instruction_infos(const std::vector < InstructionInfo > & instruction_infos);
-std::string disassemble_instruction_from_info(const InstructionInfo& info);
-std::string decode_register_name(char instruction_rm, char instruction_w);
-short stitch_lower_and_higher_bytes_to_2_byte_value(char lower, char higher);
-
-std::string get_binary_string(const std::string& contents);
-std::string get_binary_string_of_byte(char c);
-
-
-bool is_next_byte_needed_to_determine_length(InstructionInfo& info);
-unsigned int determine_displacement_length_from_second_byte(char data);
-
-std::string determine_mnemonic_from_info(const InstructionInfo& info);
-std::string determine_mnemonic_for_arithmetic_instruction_type_from_reg_field(const InstructionInfo& info);
-std::string instruction_decode_effective_address(const InstructionInfo& info, char register_decode_value);
 
 
 #endif // DECODER_HPP

@@ -10,7 +10,8 @@ DecoderWindow::DecoderWindow(QWidget *parent)
     , ui(new Ui::DecoderWindow)
 {
     ui->setupUi(this);
-    connect(ui->actionOpen_File, &QAction::triggered, this, &DecoderWindow::open);
+    connect(ui->actionOpen_File, &QAction::triggered, this, &DecoderWindow::openInputFile);
+    connect(ui->actionOpen_Solution_File, &QAction::triggered, this, &DecoderWindow::openSolutionFile);
 }
 
 DecoderWindow::~DecoderWindow()
@@ -18,14 +19,27 @@ DecoderWindow::~DecoderWindow()
     delete ui;
 }
 
-void DecoderWindow::open()
+void DecoderWindow::openInputFile()
 {
     inputTextFileName = QFileDialog::getOpenFileName(this,
         tr("Open .asm file to decode"), "", "");
     if(!inputTextFileName.isNull()) {
-        QFile file(inputTextFileName);
-        file.open(QFile::ReadOnly | QFile::Text);
-        ui->inputText->setPlainText(file.readAll());
+        QFile inputTextFile(inputTextFileName);
+        inputTextFile.open(QFile::ReadOnly | QFile::Text);
+        ui->inputText->setPlainText(inputTextFile.readAll());
+    }
+
+    ui->outputText->setPlainText("");
+}
+
+void DecoderWindow::openSolutionFile()
+{
+    solutionTextFileName = QFileDialog::getOpenFileName(this,
+                                                     tr("Open .asm file to decode"), "", "");
+    if(!solutionTextFileName.isNull()) {
+        QFile solutionTextFile(solutionTextFileName);
+        solutionTextFile.open(QFile::ReadOnly | QFile::Text);
+        ui->solutionText->setPlainText(solutionTextFile.readAll());
     }
 }
 
@@ -33,8 +47,9 @@ void DecoderWindow::open()
 void DecoderWindow::decodeInputText()
 {
     std::string inputText = read_entire_file(inputTextFileName.toStdString());
-    std::string decodingResult = parse(inputText);
+    std::unique_ptr<Decoder> p_decoder = std::make_unique<Decoder>();
+    DecodingResult decoding_result = p_decoder->try_to_parse_input_stream(inputText);
 
-    QString outputText = QString::fromStdString(decodingResult);
+    QString outputText = QString::fromStdString(decoding_result.to_string());
     ui->outputText->setPlainText(outputText);
 }

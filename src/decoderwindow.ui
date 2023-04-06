@@ -44,7 +44,18 @@
        </widget>
       </item>
       <item>
-       <widget class="QPlainTextEdit" name="outputText"/>
+       <widget class="QPlainTextEdit" name="outputText">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="solutionText">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -64,12 +75,18 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_File"/>
+    <addaction name="actionOpen_Solution_File"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
   <action name="actionOpen_File">
    <property name="text">
-    <string>Open File</string>
+    <string>Open Input File</string>
+   </property>
+  </action>
+  <action name="actionOpen_Solution_File">
+   <property name="text">
+    <string>Open Solution File</string>
    </property>
   </action>
  </widget>
