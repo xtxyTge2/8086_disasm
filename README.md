@@ -1,5 +1,8 @@
-# 8086_disasm
+# 8086_disasm (Deprecated)
+This is a deprecated version. A new complete rewrite with a different approach is here: [Intel8086_decoder](https://github.com/xtxyTge2/Intel8086_decoder).
 
+
+#
 Attempt at writing a 8086/8088 instruction set disassembler. The idea for this project came by following along the [Computer Enhance](https://www.computerenhance.com/) series, where its an exercise
 to decode some(!) of the 8086 instructions. We attempt to go a few steps further and try to decode some more instructions...
 
